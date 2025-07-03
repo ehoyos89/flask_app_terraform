@@ -248,8 +248,36 @@ export FLASK_SECRET="$FLASK_SECRET"
 EOF
 
 # Iniciando base de datos
-log "Iniciando base de datos..."
-cat database_create_tables.sql | mysql -h $DATABASE_HOST -u $DATABASE_USER -p$DATABASE_PASSWORD $DATABASE_DB_NAME
+log "Esperando que la base de datos esté disponible en ${db_host_only}..."
+MAX_DB_RETRIES=15
+DB_RETRY_COUNT=0
+DB_READY=false
+
+while [ $DB_RETRY_COUNT -lt $MAX_DB_RETRIES ]; do
+  log "Intento de conexión a la BD #$((DB_RETRY_COUNT + 1))/$MAX_DB_RETRIES..."
+  if mysqladmin ping -h "${db_host_only}" --user="$DB_USERNAME" --password="$DB_PASSWORD" --silent --connect-timeout=10; then
+    log "✓ Conexión a la base de datos exitosa."
+    DB_READY=true
+    break
+  else
+    log "✗ La base de datos no está lista. Reintentando en 20 segundos..."
+    DB_RETRY_COUNT=$((DB_RETRY_COUNT + 1))
+    sleep 20
+  fi
+done
+
+if [ "$DB_READY" = true ]; then
+  log "Iniciando la creación de tablas en la base de datos..."
+  if cat database_create_tables.sql | mysql -h "${db_host_only}" -u "$DB_USERNAME" -p"$DB_PASSWORD" "${db_name}"; then
+    log "✓ Tablas creadas exitosamente."
+  else
+    log "✗ ERROR: Falló la creación de tablas."
+    exit 1
+  fi
+else
+  log "✗ ERROR: No se pudo conectar a la base de datos después de $MAX_DB_RETRIES intentos."
+  exit 1
+fi
 
 # Crear un servicio systemd para Gunicorn
 log "Creando servicio systemd para Flask..."

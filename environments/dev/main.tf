@@ -22,4 +22,5 @@ module "flask_infraestructure" {
   db_allocated_storage = 20
   db_name = var.db_name
   db_username = var.db_username
+  photos_bucket = module.s3.photos_bucket_name
 }

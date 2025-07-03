@@ -55,10 +55,14 @@ resource "aws_iam_policy" "secrets_policy" {
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:ListBucket"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:s3:::${var.photos_bucket}/*"
+        Resource = [
+          "arn:aws:s3:::${var.photos_bucket}",
+          "arn:aws:s3:::${var.photos_bucket}/*"
+        ]
       }
     ]
   })
@@ -140,8 +144,8 @@ resource "aws_lb_target_group" "main" {
   health_check {
     enabled = true
     path                = "/"
-    interval            = 30
-    timeout             = 5
+    interval            = 300
+    timeout             = 120
     healthy_threshold   = 2
     unhealthy_threshold = 2
     matcher             = "200-299"
@@ -172,7 +176,7 @@ resource "aws_autoscaling_group" "main" {
   vpc_zone_identifier = var.public_subnet_ids
   target_group_arns = [aws_lb_target_group.main.arn]
   health_check_type = "ELB"
-  health_check_grace_period = 300
+  health_check_grace_period = 600
 
   min_size = var.min_size
   max_size = var.max_size
