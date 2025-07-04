@@ -1,14 +1,18 @@
-# Random password for the RDS instance
+# Contraseña aleatoria para la instancia RDS.
+# Genera una contraseña segura para la base de datos.
 resource "random_password" "db_password" {
   length  = 16
   special = false
 }
 
-# Store database password in AWS Secrets Manager
+# Almacena la contraseña de la base de datos en AWS Secrets Manager.
+# Guarda las credenciales de la base de datos de forma segura.
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "${var.project_name}-${var.environment}-db-credentials"
 }
 
+# Versión del secreto de las credenciales de la base de datos.
+# Almacena el nombre de usuario y la contraseña en el secreto.
 resource "aws_secretsmanager_secret_version" "db_credentials_version" {
   secret_id     = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
@@ -17,7 +21,8 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
   })
 }
 
-# Generate a random password for the flask application
+# Genera una contraseña aleatoria para la aplicación Flask.
+# Crea una clave secreta para la aplicación Flask.
 resource "random_password" "flask_app_password" {
   length  = 16
   special = false
@@ -25,11 +30,14 @@ resource "random_password" "flask_app_password" {
   lower   = true
 }
 
+# Almacena la clave secreta de Flask en AWS Secrets Manager.
 resource "aws_secretsmanager_secret" "flask_secret_key" {
   name        = "${var.project_name}-${var.environment}-flask-secret-key"
   description = "Secret key for Flask application ${var.project_name}-${var.environment}"
   
 }
+# Versión del secreto de la clave de Flask.
+# Almacena la clave secreta en el secreto.
 resource "aws_secretsmanager_secret_version" "flask_secret_key_version" {
   secret_id     = aws_secretsmanager_secret.flask_secret_key.id
   secret_string = jsonencode({
@@ -39,7 +47,8 @@ resource "aws_secretsmanager_secret_version" "flask_secret_key_version" {
 }
 
 
-# DB subnet group for RDS
+# Grupo de subredes de base de datos para RDS.
+# Define las subredes en las que se desplegará la instancia RDS.
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-${var.environment}-db-subnet-group"
   subnet_ids = var.private_subnet_ids
@@ -49,7 +58,8 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
-# RDS instance creation
+# Creación de la instancia RDS.
+# Crea la instancia de la base de datos MySQL.
 resource "aws_db_instance" "main" {
   identifier = "${replace(var.project_name, "_", "-")}-${var.environment}-db"
 
@@ -79,7 +89,8 @@ resource "aws_db_instance" "main" {
   
 }
 
-# Read replica for production environment
+# Réplica de lectura para el entorno de producción.
+# Crea una réplica de lectura para mejorar la disponibilidad y el rendimiento.
 resource "aws_db_instance" "replica" {
   count = var.multi_az ? 1 : 0
 

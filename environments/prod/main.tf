@@ -1,23 +1,28 @@
+# Módulo principal de la infraestructura para el entorno de producción.
+# Este módulo despliega la infraestructura de la aplicación Flask en el entorno de producción.
 module "flask_infraestructure" {
-  source = "../.."
+  source = "../.." # Hace referencia al módulo raíz del proyecto.
 
   project_name = var.project_name
   environment = "prod"
   aws_region = var.aws_region
 
-  # VPC configuration
+  # Configuración de la VPC (Virtual Private Cloud).
+  # Define los bloques CIDR para la VPC y las subredes públicas y privadas.
   vpc_cidr = "10.1.0.0/16"
   public_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
   private_subnet_cidrs = ["10.1.10.0/24", "10.1.20.0/24"]
   
-  # EC2 configuration
+  # Configuración de las instancias EC2.
+  # Define el tipo de instancia, el nombre de la clave SSH y la configuración del Auto Scaling Group.
   instance_type = "t2.micro"
   key_name = var.key_name
   asg_min_size = 1
   asg_max_size = 2
   asg_desired_capacity = 1
 
-  # RDS configuration
+  # Configuración de la base de datos RDS.
+  # Define la clase de instancia, el almacenamiento, el nombre de la base de datos y el nombre de usuario.
   db_instance_class = "db.t4g.micro"
   db_allocated_storage = 20
   db_name = var.db_name

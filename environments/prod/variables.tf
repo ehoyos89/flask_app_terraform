@@ -1,3 +1,5 @@
+# Variable para el nombre del proyecto.
+# Descripción: El nombre del proyecto.
 variable "project_name" {
   description = "The name of the project"
   type        = string
@@ -5,17 +7,23 @@ variable "project_name" {
 
 }
 
+# Variable para la región de AWS.
+# Descripción: La región de AWS en la que se desplegarán los recursos.
 variable "aws_region" {
   description = "The AWS region to deploy resources in"
   type        = string
   default     = "us-east-1"
 }
 
+# Variable para el nombre del par de claves SSH.
+# Descripción: Nombre del par de claves SSH a utilizar para las instancias EC2.
 variable "key_name" {
   description = "Name of the SSH key pair to use for EC2 instances"
   type        = string
 }
 
+# Variable para el nombre de la base de datos RDS.
+# Descripción: Nombre de la base de datos RDS.
 variable "db_name" {
   description = "Name of the RDS database"
   type        = string
@@ -23,6 +31,8 @@ variable "db_name" {
   
 }
 
+# Variable para el nombre de usuario de la base de datos RDS.
+# Descripción: Nombre de usuario para la base de datos RDS.
 variable "db_username" {
   description = "Username for the RDS database"
   type        = string

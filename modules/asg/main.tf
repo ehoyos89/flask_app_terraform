@@ -1,4 +1,5 @@
-# Get the latest Amazon Linux 2 AMI
+# Obtiene la última AMI de Amazon Linux 2.
+# Busca la imagen de máquina de Amazon más reciente para las instancias EC2.
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners     = ["amazon"]
@@ -9,7 +10,8 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# IAM role for the EC2 instances
+# Rol de IAM para las instancias EC2.
+# Define un rol que permite a las instancias EC2 interactuar con otros servicios de AWS.
 resource "aws_iam_role" "ec2_role" {
   name = "${var.project_name}-${var.environment}-ec2-role"
 
@@ -32,7 +34,8 @@ resource "aws_iam_role" "ec2_role" {
   
 }
 
-# IAM policy for accessing Secrets Manager
+# Política de IAM para acceder a Secrets Manager y S3.
+# Define los permisos para que las instancias EC2 puedan leer secretos y acceder al bucket de S3.
 resource "aws_iam_policy" "secrets_policy" {
   name = "${var.project_name}-${var.environment}-secrets-policy"
 
@@ -69,19 +72,22 @@ resource "aws_iam_policy" "secrets_policy" {
   
 }
 
-# Attach the policy to the role
+# Asocia la política al rol.
+# Adjunta la política de IAM al rol de EC2.
 resource "aws_iam_role_policy_attachment" "secrets_policy_attachment" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = aws_iam_policy.secrets_policy.arn
 }
 
-# IAM instance profile for the EC2 instances
+# Perfil de instancia de IAM para las instancias EC2.
+# Permite pasar el rol de IAM a las instancias EC2.
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "${var.project_name}-${var.environment}-ec2-profile"
   role = aws_iam_role.ec2_role.name
 }
 
-# User data script to install dependencies and configure the application
+# Script de datos de usuario para instalar dependencias y configurar la aplicación.
+# Prepara el script que se ejecutará en las instancias EC2 al iniciarse.
 locals {
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     project_name                = var.project_name
@@ -96,9 +102,11 @@ locals {
   }))
 }
 
+# Obtiene la región de AWS actual.
 data "aws_region" "current" {}
 
-# Launch template for the Auto Scaling group
+# Plantilla de lanzamiento para el grupo de Auto Scaling.
+# Define la configuración de las instancias EC2 que se lanzarán.
 resource "aws_launch_template" "main" {
   name_prefix = "${var.project_name}-${var.environment}-"
   image_id = data.aws_ami.amazon_linux.id
@@ -119,7 +127,8 @@ resource "aws_launch_template" "main" {
   }
 }
 
-# Application Load Balancer
+# Application Load Balancer.
+# Distribuye el tráfico entrante entre las instancias EC2.
 resource "aws_lb" "main" {
   name               = "${replace(var.project_name, "_", "-")}-${var.environment}-alb"
   internal           = false
@@ -134,7 +143,8 @@ resource "aws_lb" "main" {
   }
 }
   
-# Target group for the Auto Scaling group
+# Grupo de destino para el grupo de Auto Scaling.
+# Define el grupo de instancias que recibirán tráfico del ALB.
 resource "aws_lb_target_group" "main" {
   name     = "${replace(var.project_name, "_", "-")}-${var.environment}-tg"
   port     = 5000
@@ -158,7 +168,8 @@ resource "aws_lb_target_group" "main" {
   }
 }
 
-# ALB listener
+# Listener del ALB.
+# Escucha el tráfico entrante en el puerto 80 y lo reenvía al grupo de destino.
 resource "aws_lb_listener" "main" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
@@ -170,7 +181,8 @@ resource "aws_lb_listener" "main" {
   }
 }
 
-# Auto Scaling group
+# Grupo de Auto Scaling.
+# Ajusta automáticamente el número de instancias EC2 según la demanda.
 resource "aws_autoscaling_group" "main" {
   name = "${var.project_name}-${var.environment}-asg"
   vpc_zone_identifier = var.public_subnet_ids
@@ -188,7 +200,8 @@ resource "aws_autoscaling_group" "main" {
   }
 }
 
-# Auto Scaling policy
+# Política de Auto Scaling para escalar hacia arriba.
+# Define la política para agregar instancias cuando aumenta la carga.
 resource "aws_autoscaling_policy" "scale_up" {
   name                  = "${var.project_name}-${var.environment}-scale-up"
   scaling_adjustment      = 1
@@ -197,6 +210,8 @@ resource "aws_autoscaling_policy" "scale_up" {
   autoscaling_group_name = aws_autoscaling_group.main.name
 }
 
+# Política de Auto Scaling para escalar hacia abajo.
+# Define la política para eliminar instancias cuando disminuye la carga.
 resource "aws_autoscaling_policy" "scale_down" {
   name                  = "${var.project_name}-${var.environment}-scale-down"
   scaling_adjustment      = -1
@@ -205,7 +220,8 @@ resource "aws_autoscaling_policy" "scale_down" {
   autoscaling_group_name = aws_autoscaling_group.main.name
 }
 
-# CloudWatch alarms for scaling
+# Alarmas de CloudWatch para el escalado.
+# Dispara las políticas de escalado basadas en la utilización de la CPU.
 resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   alarm_name          = "${var.project_name}-${var.environment}-cpu-high"
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -224,6 +240,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
 
 }
 
+# Alarma de CloudWatch para el escalado hacia abajo.
+# Dispara la política de escalado hacia abajo cuando la utilización de la CPU es baja.
 resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   alarm_name          = "${var.project_name}-${var.environment}-cpu-low"
   comparison_operator = "LessThanOrEqualToThreshold"

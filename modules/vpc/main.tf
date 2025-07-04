@@ -1,4 +1,5 @@
-# VPC
+# VPC (Virtual Private Cloud)
+# Crea la red principal.
 resource "aws_vpc" "main" {
   cidr_block                  = var.vpc_cidr
   enable_dns_hostnames        = true
@@ -10,6 +11,7 @@ resource "aws_vpc" "main" {
 }
 
 # Internet Gateway
+# Permite la comunicación entre la VPC e Internet.
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
@@ -18,7 +20,8 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# Elastic IP for NAT Gateway
+# Elastic IP para NAT Gateway
+# Asigna una IP pública estática a la NAT Gateway.
 resource "aws_eip" "nat" {
   domain = "vpc"
 
@@ -29,7 +32,8 @@ resource "aws_eip" "nat" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# Public Subnets
+# Subredes Públicas
+# Subredes con acceso directo a Internet.
 resource "aws_subnet" "public" {
   count = length(var.public_subnet_cidrs)
 
@@ -44,7 +48,8 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Private Subnets
+# Subredes Privadas
+# Subredes sin acceso directo a Internet.
 resource "aws_subnet" "private" {
   count = length(var.private_subnet_cidrs)
 
@@ -59,6 +64,7 @@ resource "aws_subnet" "private" {
 }
 
 # NAT Gateway
+# Permite a las instancias en subredes privadas acceder a Internet.
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
@@ -68,7 +74,8 @@ resource "aws_nat_gateway" "main" {
   }
   depends_on = [aws_internet_gateway.main]
 }
-# Route Table for Public Subnets
+# Tabla de Rutas para Subredes Públicas
+# Dirige el tráfico de las subredes públicas a Internet a través del Internet Gateway.
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -82,7 +89,8 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Route Table for Private Subnets
+# Tabla de Rutas para Subredes Privadas
+# Dirige el tráfico de las subredes privadas a Internet a través de la NAT Gateway.
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
@@ -95,7 +103,8 @@ resource "aws_route_table" "private" {
   }
 }
 
-# Route Table Associations 
+# Asociaciones de Tablas de Rutas
+# Asocia las tablas de rutas con sus respectivas subredes.
 resource "aws_route_table_association" "public" {
   count = length(aws_subnet.public)
 

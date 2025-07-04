@@ -1,3 +1,5 @@
+# Bloque de configuración de Terraform.
+# Define la versión de Terraform requerida y los proveedores necesarios.
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -8,6 +10,8 @@ terraform {
   }
 }
 
+# Configuración del proveedor de AWS.
+# Define la región de AWS y las etiquetas por defecto para todos los recursos.
 provider "aws" {
   region = var.aws_region
 
@@ -20,12 +24,14 @@ provider "aws" {
   }
 }
 
-# Data sources
+# Fuentes de datos (Data Sources).
+# Obtiene las zonas de disponibilidad disponibles en la región de AWS configurada.
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# VPC module
+# Módulo de VPC (Virtual Private Cloud).
+# Crea la red principal, incluyendo subredes públicas y privadas.
 module "vpc" {
   source = "./modules/vpc"
 
@@ -37,7 +43,8 @@ module "vpc" {
   private_subnet_cidrs = var.private_subnet_cidrs
 }
 
-# Security groups module
+# Módulo de grupos de seguridad.
+# Define las reglas de firewall para los recursos de la VPC.
 module "security_groups" {
   source = "./modules/security_groups"
 
@@ -46,7 +53,8 @@ module "security_groups" {
   vpc_id       = module.vpc.vpc_id
 }
 
-# RDS module
+# Módulo de RDS (Relational Database Service).
+# Crea la base de datos de la aplicación.
 module "rds" {
   source = "./modules/rds"
   
@@ -62,7 +70,8 @@ module "rds" {
   multi_az = var.environment == "production" ? true : false
 }
 
-# S3 module
+# Módulo de S3 (Simple Storage Service).
+# Crea un bucket de S3 para almacenar archivos.
 module "s3" {
   source = "./modules/s3"
 
@@ -70,7 +79,8 @@ module "s3" {
   environment  = var.environment
 }
 
-# Auto Scaling group module
+# Módulo de Auto Scaling Group (ASG).
+# Crea un grupo de autoescalado para las instancias EC2 de la aplicación.
 module "asg" {
   source = "./modules/asg"
 

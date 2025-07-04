@@ -1,45 +1,45 @@
 #!/bin/bash
 # user_data.sh
-# Este script se ejecuta como root.
+# Este script se ejecuta como root en las instancias EC2 al iniciar.
 
-# Función para logging
+# Función para logging: Registra mensajes con fecha y hora en el log de user-data.
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a /var/log/user-data.log
 }
 
 log "Iniciando script de User Data para ${project_name}..."
 
-# Redireccionar toda la salida al log
+# Redireccionar toda la salida estándar y de error al archivo de log.
 exec > >(tee -a /var/log/user-data.log)
 exec 2>&1
 
-# Configurar variables de entorno
+# Configurar variables de entorno básicas para el script.
 export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 export HOME="/root"
 
 log "Esperando que el sistema esté completamente inicializado..."
 sleep 30
 
-# Detectar la distribución
+# Detectar la distribución del sistema operativo (Amazon Linux, Ubuntu, Red Hat/CentOS).
 if [ -f /etc/os-release ]; then
   . /etc/os-release
   OS=$NAME
   log "Sistema operativo detectado: $OS"
 fi
 
-# Actualizar el sistema según la distribución
+# Actualizar el sistema e instalar dependencias según la distribución.
 log "Actualizando el sistema..."
 if [[ "$OS" == *"Amazon Linux"* ]]; then
   yum update -y
   yum install -y python3 python3-pip mysql git aws-cli jq wget curl
 
-  # Instalar amazon-linux-extras si está disponible
+  # Instalar amazon-linux-extras si está disponible para EPEL.
   if command -v amazon-linux-extras &>/dev/null; then
     amazon-linux-extras install epel -y
     log "EPEL instalado via amazon-linux-extras"
   fi
 
-  # Instalar stress (opcional para testing)
+  # Instalar stress (opcional, para pruebas de carga).
   yum install -y stress
 
 elif [[ "$OS" == *"Ubuntu"* ]]; then
@@ -55,7 +55,7 @@ else
   yum install -y python3 python3-pip mysql git aws-cli jq wget curl stress
 fi
 
-# Verificar instalaciones críticas
+# Verificar que las herramientas críticas estén instaladas correctamente.
 log "Verificando instalaciones..."
 for cmd in git python3 aws jq pip3; do
   if command -v $cmd &>/dev/null; then
@@ -74,12 +74,12 @@ for cmd in git python3 aws jq pip3; do
   fi
 done
 
-# Configurar AWS CLI
+# Configurar AWS CLI con la región por defecto.
 log "Configurando AWS CLI..."
 aws configure set default.region ${aws_region}
 aws configure set default.output json
 
-# Verificar conectividad a GitHub
+# Verificar conectividad a GitHub para clonar el repositorio.
 log "Verificando conectividad a GitHub..."
 if curl -s --connect-timeout 10 https://github.com >/dev/null; then
   log "Conectividad a GitHub: OK"
@@ -88,12 +88,12 @@ else
   exit 1
 fi
 
-# Crear directorio de destino
+# Crear el directorio de destino para la aplicación Flask.
 TARGET_DIR="/home/ec2-user/flask-app"
 log "Creando directorio: $TARGET_DIR"
 mkdir -p "$TARGET_DIR"
 
-# Clonar el repositorio con reintentos
+# Clonar el repositorio de GitHub con reintentos en caso de fallo.
 log "Clonando repositorio de GitHub..."
 REPO_URL="https://github.com/ehoyos89/FlaskApp.git"
 MAX_RETRIES=3
@@ -121,15 +121,15 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   fi
 done
 
-# Cambiar ownership del directorio
+# Cambiar la propiedad del directorio de la aplicación al usuario ec2-user.
 log "Cambiando ownership del directorio de la aplicación..."
 chown -R ec2-user:ec2-user /home/ec2-user/flask-app
 
-# Navegar al directorio de la aplicación
+# Navegar al directorio de la aplicación.
 log "Navegando al directorio de la aplicación..."
 cd "$TARGET_DIR"
 
-# Instalar dependencias de Python
+# Instalar dependencias de Python desde requirements.txt.
 log "Instalando dependencias de Python..."
 if [ -f "requirements.txt" ]; then
   log "Archivo requirements.txt encontrado, instalando dependencias..."
@@ -140,7 +140,7 @@ else
   log "Warning: requirements.txt no encontrado"
 fi
 
-# Instalar Gunicorn
+# Instalar Gunicorn, el servidor WSGI para la aplicación Flask.
 log "Instalando Gunicorn..."
 pip3 install gunicorn
 if command -v gunicorn &>/dev/null; then
@@ -151,10 +151,11 @@ else
   exit 1
 fi
 
-# Obtener secretos de AWS Secrets Manager
+# Obtener secretos de AWS Secrets Manager.
 log "Obteniendo secretos de AWS Secrets Manager..."
 
-# Función para obtener secretos con reintentos - CORREGIDA
+# Función para obtener secretos con reintentos.
+# Redirige los logs a stderr para que no se mezclen con el valor del secreto.
 get_secret() {
   local secret_arn=$1
   local key=$2
@@ -186,7 +187,8 @@ get_secret() {
   return 1
 }
 
-# Obtener secretos - capturar solo el valor, no los logs
+# Obtener secretos de la base de datos y de Flask.
+# Captura solo el valor del secreto, no los logs de la función get_secret.
 log "Obteniendo secreto de username de la base de datos..."
 DB_USERNAME=$(get_secret "${db_username_secret_arn}" "username")
 if [ $? -ne 0 ]; then
@@ -213,11 +215,12 @@ log "Flask secret key obtenido exitosamente"
 
 log "Todos los secretos obtenidos exitosamente"
 
-# Crear directorio para variables de entorno del servicio
+# Crear directorio para variables de entorno del servicio systemd.
 log "Configurando servicio systemd..."
 mkdir -p /etc/systemd/system/flask_app.service.d
 
-# Configurar variables de entorno para la aplicación
+# Configurar variables de entorno para la aplicación Flask.
+# Estas variables serán utilizadas por el servicio systemd.
 log "Creando archivo de configuración de entorno..."
 db_host_only=$(echo "$db_endpoint" | cut -d':' -f1)
 cat >/etc/systemd/system/flask_app.service.d/environment.conf <<EOF
@@ -231,11 +234,11 @@ Environment="DATABASE_DB_NAME=${db_name}"
 Environment="FLASK_SECRET=$FLASK_SECRET"
 EOF
 
-# Verificar el contenido del archivo generado
+# Verificar el contenido del archivo de configuración generado.
 log "Verificando archivo de configuración generado:"
 cat /etc/systemd/system/flask_app.service.d/environment.conf | while read line; do log "CONFIG: $line"; done
 
-# También crear el archivo de perfil para depuración (opcional)
+# También crear un archivo de perfil para depuración (opcional).
 log "Creando archivo de perfil de entorno..."
 cat >/etc/profile.d/flask_app_env.sh <<EOF
 export PHOTOS_BUCKET="${photos_bucket}"
@@ -247,7 +250,7 @@ export DATABASE_DB_NAME="${db_name}"
 export FLASK_SECRET="$FLASK_SECRET"
 EOF
 
-# Iniciando base de datos
+# Esperar a que la base de datos esté disponible antes de continuar.
 log "Esperando que la base de datos esté disponible en ${db_host_only}..."
 MAX_DB_RETRIES=15
 DB_RETRY_COUNT=0
@@ -266,6 +269,7 @@ while [ $DB_RETRY_COUNT -lt $MAX_DB_RETRIES ]; do
   fi
 done
 
+# Si la base de datos está lista, crear las tablas.
 if [ "$DB_READY" = true ]; then
   log "Iniciando la creación de tablas en la base de datos..."
   if cat database_create_tables.sql | mysql -h "${db_host_only}" -u "$DB_USERNAME" -p"$DB_PASSWORD" "${db_name}"; then
@@ -279,7 +283,7 @@ else
   exit 1
 fi
 
-# Crear un servicio systemd para Gunicorn
+# Crear un servicio systemd para Gunicorn que sirva la aplicación Flask.
 log "Creando servicio systemd para Flask..."
 cat >/etc/systemd/system/flask_app.service <<EOF
 [Unit]
@@ -298,31 +302,31 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Verificar que el archivo de aplicación existe
+# Verificar que el archivo principal de la aplicación existe.
 if [ ! -f "/home/ec2-user/flask-app/application.py" ]; then
   log "Warning: application.py no encontrado en el directorio de la aplicación"
   ls -la /home/ec2-user/flask-app/ | while read line; do log "$line"; done
 fi
 
-# Recargar systemd y habilitar/iniciar el servicio
+# Recargar systemd y habilitar/iniciar el servicio Flask.
 log "Recargando systemd daemon..."
 systemctl daemon-reload
 
 log "Habilitando servicio flask_app..."
 systemctl enable flask_app
 
-# Esperar un momento antes de iniciar el servicio
+# Esperar un momento antes de iniciar el servicio.
 log "Esperando antes de iniciar el servicio..."
 sleep 5
 
 log "Iniciando servicio flask_app..."
 systemctl start flask_app
 
-# Verificar el estado del servicio
+# Verificar el estado del servicio Flask.
 log "Verificando estado del servicio..."
 systemctl status flask_app --no-pager
 
-# Verificar que el servicio está realmente funcionando
+# Verificar que el servicio está realmente funcionando.
 sleep 10
 if systemctl is-active --quiet flask_app; then
   log "✓ Servicio flask_app está ejecutándose correctamente"
@@ -332,7 +336,7 @@ else
   journalctl -u flask_app --no-pager -l | tail -20 | while read line; do log "$line"; done
 fi
 
-# Verificar que el puerto está abierto
+# Verificar que el puerto 5000 está abierto y escuchando.
 if netstat -tuln | grep :5000 >/dev/null; then
   log "✓ Puerto 5000 está abierto y escuchando"
 else
@@ -341,11 +345,11 @@ fi
 
 log "Script de User Data completado"
 
-# Log del estado final
+# Log del estado final del servicio.
 log "=== Estado final del servicio ==="
 systemctl status flask_app --no-pager | while read line; do log "$line"; done
 
-# Marcar que el user data se completó
+# Marcar que el user data se completó para evitar ejecuciones repetidas.
 touch /home/ec2-user/user-data-completed
 chown ec2-user:ec2-user /home/ec2-user/user-data-completed
 

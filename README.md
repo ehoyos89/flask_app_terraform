@@ -45,7 +45,7 @@ Para desplegar la infraestructura en un entorno específico, sigue estos pasos:
     Navega al directorio raíz del proyecto y ejecuta `terraform init`. Esto descargará los proveedores y módulos necesarios.
 
     ```bash
-    cd /home/romulus/Documentos/proyectos/devops/infra_terraform
+    cd /directorio-del-proyecto/
     terraform init
     ```
 

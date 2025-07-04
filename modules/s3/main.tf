@@ -1,3 +1,5 @@
+# Recurso para el bucket de S3.
+# Crea un bucket de S3 para almacenar las fotos de la aplicación.
 resource "aws_s3_bucket" "photos_bucket" {
   bucket = "${replace(var.project_name, "_", "-")}-${var.environment}-photos"
 
@@ -9,7 +11,8 @@ resource "aws_s3_bucket" "photos_bucket" {
   
 }
 
-# Block public access to the bucket
+# Bloquea el acceso público al bucket.
+# Asegura que el contenido del bucket no sea accesible públicamente.
 resource "aws_s3_bucket_public_access_block" "block_public_access" {
   bucket = aws_s3_bucket.photos_bucket.id
 
@@ -19,7 +22,8 @@ resource "aws_s3_bucket_public_access_block" "block_public_access" {
   restrict_public_buckets = true
 }
 
-# Random ID for the bucket
+# ID aleatorio para el bucket.
+# Genera un ID aleatorio para asegurar que el nombre del bucket sea único.
 resource "random_id" "bucket_suffix" {
   byte_length = 6
 }
