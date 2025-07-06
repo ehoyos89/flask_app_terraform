@@ -118,3 +118,11 @@ variable "alb_security_group_id" {
   description = "ID of the ALB security group"
   type        = string
 }
+
+# Variable para la direccion de correo a usarse en la notificacion SNS.
+# Descripción: Dirección de correo electrónico para las notificaciones de SNS.
+variable "notification_email" {
+  description = "Email address for SNS notifications"
+  type        = string
+  default     = ""
+}

@@ -200,6 +200,25 @@ resource "aws_autoscaling_group" "main" {
   }
 }
 
+# Creación de notificaciones SNS para el escalado.
+# Permite enviar notificaciones por correo electrónico cuando se produzcan eventos de escalado.
+# Solo se crea si se proporciona una dirección de correo electrónico.
+resource "aws_sns_topic" "scaling_notifications" {
+  count = var.notification_email != "" ? 1 : 0
+  name = "${var.project_name}-${var.environment}-scaling-notifications"
+  
+}
+
+resource "aws_sns_topic_subscription" "email_subscription" {
+  count = var.notification_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.scaling_notifications[0].arn
+  protocol = "email"
+  endpoint = var.notification_email
+  
+}
+
+
+
 # Política de Auto Scaling para escalar hacia arriba.
 # Define la política para agregar instancias cuando aumenta la carga.
 resource "aws_autoscaling_policy" "scale_up" {
@@ -232,7 +251,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Alarm when CPU exceeds 80% for 5 minutes"
-  alarm_actions      = [aws_autoscaling_policy.scale_up.arn]
+  alarm_actions      = var.notification_email != "" ? [aws_autoscaling_policy.scale_up.arn, aws_sns_topic.scaling_notifications[0].arn] : [aws_autoscaling_policy.scale_up.arn]
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.main.name
@@ -252,7 +271,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   statistic           = "Average"
   threshold           = 70
   alarm_description   = "Alarm when CPU is below 70% for 5 minutes"
-  alarm_actions      = [aws_autoscaling_policy.scale_down.arn]
+  alarm_actions       = var.notification_email != "" ? [aws_autoscaling_policy.scale_down.arn, aws_sns_topic.scaling_notifications[0].arn] : [aws_autoscaling_policy.scale_down.arn]
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.main.name

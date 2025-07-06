@@ -101,4 +101,5 @@ module "asg" {
   db_username_secret_arn = module.rds.db_username_secret_arn
   flask_secret_key_secret_arn = module.rds.flask_secret_key_secret_arn
   photos_bucket = module.s3.photos_bucket_name
+  notification_email = var.notification_email
 }

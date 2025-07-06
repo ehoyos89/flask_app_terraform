@@ -37,3 +37,15 @@ variable "db_username" {
   default     = "admin"
 }
 
+
+#Variable para la dirección de correo electrónico para notificaciones de escalado.
+# Descripción: Dirección de correo electrónico para recibir notificaciones de escalado del ASG.
+# Si no se proporciona, no se enviarán notificaciones.
+variable "notification_email" {
+  description = "The email address for ASG scaling notifications. If not provided, no notifications will be sent."
+  type        = string
+  default     = ""
+  
+}
+
+
