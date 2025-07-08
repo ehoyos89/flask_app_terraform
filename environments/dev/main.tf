@@ -31,4 +31,7 @@ module "flask_infraestructure" {
   # Configuracion de variable para notificaciones de escalado.
   notification_email = var.notification_email
 
+  # Configuracion de variable para el servicio de registros de flujo.
+  enable_flow_log = var.enable_flow_log
+
 }

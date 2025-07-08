@@ -48,4 +48,12 @@ variable "notification_email" {
   
 }
 
+# Variable para habilitar los registros de flujo de la VPC.
+# Descripción: Habilita los registros de flujo de la VPC para monitoreo y análisis de tráfico.
+variable "enable_flow_log" {
+  description = "Enable VPC flow logs for monitoring and traffic analysis"
+  type        = bool
+  default     = false
+}
+
 

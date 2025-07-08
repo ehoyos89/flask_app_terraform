@@ -5,19 +5,21 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
-# Salida para los IDs de las subredes públicas.
-# Descripción: Los IDs de las subredes públicas.
 output "public_subnet_ids" {
-  description = "The IDs of the public subnets"
-  value       = aws_subnet.public.*.id
+  description = "List of IDs of public subnets"
+  value       = aws_subnet.public[*].id
 }
 
-# Salida para los IDs de las subredes privadas.
-# Descripción: Los IDs de las subredes privadas.
 output "private_subnet_ids" {
-  description = "The IDs of the private subnets"
-  value       = aws_subnet.private.*.id
+  description = "List of IDs of private subnets"
+  value       = aws_subnet.private[*].id
 }
+
+output "flow_log_cloudwatch_log_group_name" {
+  description = "The name of the CloudWatch Log Group for VPC Flow Logs"
+  value       = var.enable_flow_log ? aws_cloudwatch_log_group.flow_logs[0].name : ""
+}
+
 
 # Salida para la IP de la NAT Gateway.
 # Descripción: La IP elástica de la NAT Gateway.

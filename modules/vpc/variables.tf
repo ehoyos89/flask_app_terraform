@@ -41,3 +41,11 @@ variable "private_subnet_cidrs" {
   type        = list(string)
   
 }
+
+# Variable para habilitar/deshabilitar VPC Flow Logs.
+# Descripción: Si es verdadero, habilita VPC Flow Logs.
+variable "enable_flow_log" {
+  description = "If true, enables VPC Flow Logs"
+  type        = bool
+  default     = false
+}

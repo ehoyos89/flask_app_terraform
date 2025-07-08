@@ -120,3 +120,85 @@ resource "aws_route_table_association" "private" {
 
 }
 
+# CloudWatch Log Group para VPC Flow Logs
+# Almacena los registros de flujo de la VPC.
+resource "aws_cloudwatch_log_group" "flow_logs" {
+  count = var.enable_flow_log ? 1 : 0
+  name  = "/aws/vpc/${var.project_name}-${var.environment}-flow-logs"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-flow-logs"
+  }
+}
+
+# Rol de IAM para VPC Flow Logs
+# Permite a VPC Flow Logs publicar en CloudWatch.
+resource "aws_iam_role" "flow_logs" {
+  count = var.enable_flow_log ? 1 : 0
+  name  = "${var.project_name}-${var.environment}-flow-logs-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "vpc-flow-logs.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-flow-logs-role"
+  }
+}
+
+# Política de IAM para VPC Flow Logs
+# Define los permisos para que el rol de Flow Logs pueda escribir en CloudWatch.
+resource "aws_iam_role_policy" "flow_logs" {
+  count = var.enable_flow_log ? 1 : 0
+  name  = "${var.project_name}-${var.environment}-flow-logs-policy"
+  role  = aws_iam_role.flow_logs[0].id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+# VPC Flow Log
+# Habilita el registro de tráfico para las subredes públicas.
+resource "aws_flow_log" "public_subnets" {
+  count = var.enable_flow_log ? length(aws_subnet.public) : 0
+
+  iam_role_arn    = aws_iam_role.flow_logs[0].arn
+  log_destination = aws_cloudwatch_log_group.flow_logs[0].arn
+  traffic_type    = "ALL"
+  subnet_id       = aws_subnet.public[count.index].id
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-flow-log-public-${count.index + 1}"
+  }
+
+  depends_on = [aws_iam_role_policy.flow_logs]
+}
+

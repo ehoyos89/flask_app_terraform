@@ -41,6 +41,7 @@ module "vpc" {
   availability_zones = data.aws_availability_zones.available.names
   public_subnet_cidrs = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  enable_flow_log = var.enable_flow_log
 }
 
 # Módulo de grupos de seguridad.
