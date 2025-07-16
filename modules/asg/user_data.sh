@@ -1,6 +1,5 @@
 #!/bin/bash
 # user_data.sh
-# Este script se ejecuta como root en las instancias EC2 al iniciar.
 
 # Función para logging: Registra mensajes con fecha y hora en el log de user-data.
 log() {
